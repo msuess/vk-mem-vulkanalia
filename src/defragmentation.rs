@@ -1,7 +1,8 @@
 use crate::ffi;
 use crate::Allocator;
-use ash::prelude::VkResult;
-use ash::vk;
+use crate::to_vk_result;
+use vulkanalia::VkResult;
+use vulkanalia::vk;
 
 pub use ffi::VmaDefragmentationMove as DefragmentationMove;
 pub use ffi::VmaDefragmentationStats as DefragmentationStats;
@@ -72,7 +73,7 @@ impl Allocator {
     ) -> VkResult<DefragmentationContext> {
         let mut context: ffi::VmaDefragmentationContext = std::ptr::null_mut();
 
-        ffi::vmaBeginDefragmentation(self.internal, info, &mut context).result()?;
+        to_vk_result(ffi::vmaBeginDefragmentation(self.internal, info, &mut context))?;
 
         Ok(DefragmentationContext {
             allocator: self,

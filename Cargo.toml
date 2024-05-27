@@ -1,13 +1,13 @@
 [package]
-name = "vk-mem"
+name = "vk-mem-vulkanalia"
 version = "0.4.0"
-authors = ["Graham Wihlidal <graham@wihlidal.ca>", "Zhixing Zhang <me@neoto.xin>"]
-description = "Rust ffi bindings and idiomatic wrapper for AMD Vulkan Memory Allocator (VMA)"
-homepage = "https://github.com/gwihlidal/vk-mem-rs"
-repository = "https://github.com/gwihlidal/vk-mem-rs"
-documentation = "https://docs.rs/vk-mem"
+authors = ["Marco Süß <msuess@mailbox.org>", "Graham Wihlidal <graham@wihlidal.ca>", "Zhixing Zhang <me@neoto.xin>"]
+description = "Rust ffi bindings and idiomatic wrapper for AMD Vulkan Memory Allocator (VMA) using vulkanalia instead of ash. Fork of vk-mem."
+homepage = "https://github.com/msuess/vk-mem-vulkanalia"
+repository = "https://github.com/msuess/vk-mem-vulkanalia"
+documentation = "https://docs.rs/vk-mem-vulkanalia"
 readme = "README.md"
-keywords = ["vulkan", "vk", "ash", "memory", "allocator"]
+keywords = ["vulkan", "vk", "vulkanalia", "memory", "allocator"]
 categories = ["api-bindings", "rendering", "rendering::engine", "rendering::graphics-api", ]
 license = "MIT/Apache-2.0"
 build = "build.rs"
@@ -22,12 +22,16 @@ include = [
 edition = "2021"
 
 [badges]
-travis-ci = { repository = "gwihlidal/vk-mem-rs" }
+travis-ci = { repository = "msuess/vk-mem-vulkanalia" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]
-ash = { version = "0.38", default-features = false }
 bitflags = "2.5"
+vulkanalia = { version = "0.23.0", default-features = false }
+vulkanalia-sys = { version = "0.23.0", default-features = false }
+
+[dev-dependencies]
+vulkanalia = { version = "0.23.0", features = ["libloading", "provisional"] }
 
 [build-dependencies]
 cc = "1.0"
@@ -42,8 +46,9 @@ opt-level = 3
 codegen-units = 1
 
 [features]
-default = ["loaded"]
+default = ["std"]
 generate_bindings=["bindgen"]
-linked=["ash/linked"]
-loaded=["ash/loaded"]
+libloading=["vulkanalia/libloading"]
 recording=[]
+std=["vulkanalia/std", "vulkanalia-sys/std"]
+no_std_error=["vulkanalia/no_std_error", "vulkanalia-sys/no_std_error"]
