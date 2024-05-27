@@ -45,7 +45,7 @@ opt-level = 3
 codegen-units = 1
 
 [features]
-default = ["std"]
+default = ["std", "libloading"]
 generate_bindings=["bindgen"]
 libloading=["vulkanalia/libloading"]
 recording=[]
