@@ -1,6 +1,6 @@
 [package]
 name = "vk-mem-vulkanalia"
-version = "0.4.0"
+version = "0.1.0+vk-mem-0.4.0"
 authors = ["Marco Süß <msuess@mailbox.org>"]
 description = "Rust ffi bindings and idiomatic wrapper for AMD Vulkan Memory Allocator (VMA) using vulkanalia instead of ash. Fork of vk-mem."
 homepage = "https://github.com/msuess/vk-mem-vulkanalia"
@@ -22,7 +22,6 @@ include = [
 edition = "2021"
 
 [badges]
-travis-ci = { repository = "msuess/vk-mem-vulkanalia" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]
