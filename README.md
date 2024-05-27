@@ -1,17 +1,15 @@
-vk-mem
-========
+# vk-mem-vulkanalia
 
-[![vk-mem on travis-ci.com](https://travis-ci.com/gwihlidal/vk-mem-rs.svg?branch=master)](https://travis-ci.com/gwihlidal/vk-mem-rs)
-[![Latest version](https://img.shields.io/crates/v/vk-mem.svg)](https://crates.io/crates/vk-mem)
-[![Documentation](https://docs.rs/vk-mem/badge.svg)](https://docs.rs/vk-mem)
-[![Lines of Code](https://tokei.rs/b1/github/gwihlidal/vk-mem-rs)](https://github.com/gwihlidal/vk-mem-rs)
+[![Latest version](https://img.shields.io/crates/v/vk-mem.svg)](https://crates.io/crates/vk-mem-vulkanalia)
+[![Documentation](https://docs.rs/vk-mem/badge.svg)](https://docs.rs/vk-mem-vulkanalia)
 ![MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 ![APACHE2](https://img.shields.io/badge/license-APACHE2-blue.svg)
 
-This crate provides an FFI layer and idiomatic rust wrappers for the excellent AMD Vulkan Memory Allocator (VMA) C/C++ library.
+This crate is a fork of [vk-mem][https://crates.io/vk-mem] using [vulkanalia][https://crates.io/vulkanalia] instead of [ash][https://crates.io/ash]. It provides an FFI layer and idiomatic rust wrappers for the excellent AMD Vulkan Memory Allocator (VMA) C/C++ library.
 
-- [Documentation](https://docs.rs/vk-mem)
-- [Release Notes](https://github.com/gwihlidal/vk-mem-rs/releases)
+- [Documentation](https://docs.rs/vk-mem-vulkanalia)
+- [Release Notes](https://github.com/msuess/vk-mem-vulkanalia/releases)
+- [vk-mem GitHub](https://github.com/gwihlidal/vk-mem-rs)
 - [VMA GitHub](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator)
 - [VMA Documentation](https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/)
 - [GPU Open Announce](https://gpuopen.com/gaming-product/vulkan-memory-allocator/)
@@ -171,15 +169,8 @@ at your option.
 ## Credits and Special Thanks
 
 - [Adam Sawicki - AMD](https://github.com/adam-sawicki-amd) (Author of C/C++ library)
-- [Maik Klein](https://github.com/MaikKlein) (Author of ash - Vulkan rust bindings)
-- [Johan Andersson](https://github.com/repi) (Contributions)
-- [Patrick Minogue](https://github.com/afpatmin) (Contributions)
-- [Layl Conway](https://github.com/LaylConway) (Contributions)
-- [aloucks](https://github.com/aloucks) (Contributions)
-- [Henrik Rydgård](https://github.com/hrydgard) (Contributions)
-- [msiglreith](https://github.com/msiglreith) (Contributions)
-- [Maksym Pavlenko](https://github.com/mxpv) (Contributions)
-- [Brandon Pollack](https://github.com/brandonpollack23) (Contributions)
+- [Kyle Mayes](https://github.com/KyleMayes) (Author of vulkanalia - Vulkan rust bindings)
+- [Graham Wihlidal](https://github.com/gwihlidal) (Author of vk-mem)
 
 ## Contribution
 
@@ -187,7 +178,7 @@ Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in this crate by you, as defined in the Apache-2.0 license, shall
 be dual licensed as above, without any additional terms or conditions.
 
-Contributions are always welcome; please look at the [issue tracker](https://github.com/gwihlidal/vk-mem-rs/issues) to see what known improvements are documented.
+Contributions are always welcome; please look at the [issue tracker](https://github.com/msuess/vk-mem-vulkanalia/issues) to see what known improvements are documented.
 
 ## Code of Conduct
 
