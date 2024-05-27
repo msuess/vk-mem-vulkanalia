@@ -119,7 +119,7 @@ impl Allocator {
 
         println!("Includes? {}", has_ext);
 
-        // #[cfg(feature = "libloading")]
+        #[cfg(feature = "libloading")]
         let routed_functions = ffi::VmaVulkanFunctions {
             vkGetInstanceProcAddr: get_instance_proc_addr_stub,
             vkGetDeviceProcAddr: get_get_device_proc_stub,
@@ -169,28 +169,14 @@ impl Allocator {
                 .instance
                 .commands()
                 .get_physical_device_memory_properties2_khr,
-            // vkGetDeviceBufferMemoryRequirements: None,
-            // vkGetDeviceImageMemoryRequirements: None,
             vkGetDeviceBufferMemoryRequirements: pick_get_device_buffer_memory_requirements_fn(
                 &create_info),
             vkGetDeviceImageMemoryRequirements: pick_get_device_image_memory_requirements_fn(&create_info),
-            // vkGetDeviceImageMemoryRequirements: create_info
-            //     .device
-            //     .commands()
-            //     .get_device_image_memory_requirements_khr,
-            // vkGetDeviceBufferMemoryRequirements: Some(create_info
-            //     .device
-            //     .commands()
-            //     .get_device_buffer_memory_requirements),
-            // vkGetDeviceImageMemoryRequirements: Some(create_info
-            //     .device
-            //     .commands()
-            //     .get_device_image_memory_requirements),
         };
-        // #[cfg(feature = "libloading")]
-        // {
+        #[cfg(feature = "libloading")]
+        {
             raw_create_info.pVulkanFunctions = &routed_functions;
-        // }
+        }
         unsafe {
             let mut internal: ffi::VmaAllocator = mem::zeroed();
             ffi::vmaCreateAllocator(&raw_create_info, &mut internal);
