@@ -1,17 +1,30 @@
 //! Easy to use, high performance memory manager for Vulkan.
+#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(feature = "core_error", feature(no_std_error))]
+
+extern crate alloc;
 
 mod definitions;
 mod defragmentation;
 mod ffi;
 mod pool;
+mod utils;
 mod virtual_block;
 pub use definitions::*;
 pub use defragmentation::*;
 pub use pool::*;
+pub use utils::*;
 pub use virtual_block::*;
 
-use ash::prelude::VkResult;
-use ash::vk;
+use vulkanalia::VkResult;
+use vulkanalia::vk;
+use vulkanalia::vk::DeviceBufferMemoryRequirements;
+use vulkanalia::vk::MemoryRequirements2;
+use vulkanalia::vk::{
+    DeviceV1_0,
+    InstanceV1_0
+};
+use vulkanalia_sys::DeviceImageMemoryRequirements;
 use std::mem;
 
 /// Main allocator object
@@ -95,72 +108,78 @@ impl Allocator {
             },
         };
 
-        #[cfg(feature = "loaded")]
+        let version = create_info.instance.get_physical_device_properties(create_info.physical_device).api_version;
+        println!("vk version {}.{}", vk::version_major(version), vk::version_minor(version));
+
+        for extension in create_info.instance.extensions() {
+            println!("Extension {}", extension);
+        }
+
+        let has_ext = create_info.instance.extensions().contains(&vk::KHR_GET_PHYSICAL_DEVICE_PROPERTIES2_EXTENSION.name);
+
+        println!("Includes? {}", has_ext);
+
+        #[cfg(feature = "libloading")]
         let routed_functions = ffi::VmaVulkanFunctions {
             vkGetInstanceProcAddr: get_instance_proc_addr_stub,
             vkGetDeviceProcAddr: get_get_device_proc_stub,
             vkGetPhysicalDeviceProperties: create_info
                 .instance
-                .fp_v1_0()
+                .commands()
                 .get_physical_device_properties,
             vkGetPhysicalDeviceMemoryProperties: create_info
                 .instance
-                .fp_v1_0()
+                .commands()
                 .get_physical_device_memory_properties,
-            vkAllocateMemory: create_info.device.fp_v1_0().allocate_memory,
-            vkFreeMemory: create_info.device.fp_v1_0().free_memory,
-            vkMapMemory: create_info.device.fp_v1_0().map_memory,
-            vkUnmapMemory: create_info.device.fp_v1_0().unmap_memory,
-            vkFlushMappedMemoryRanges: create_info.device.fp_v1_0().flush_mapped_memory_ranges,
+            vkAllocateMemory: create_info.device.commands().allocate_memory,
+            vkFreeMemory: create_info.device.commands().free_memory,
+            vkMapMemory: create_info.device.commands().map_memory,
+            vkUnmapMemory: create_info.device.commands().unmap_memory,
+            vkFlushMappedMemoryRanges: create_info.device.commands().flush_mapped_memory_ranges,
             vkInvalidateMappedMemoryRanges: create_info
                 .device
-                .fp_v1_0()
+                .commands()
                 .invalidate_mapped_memory_ranges,
-            vkBindBufferMemory: create_info.device.fp_v1_0().bind_buffer_memory,
-            vkBindImageMemory: create_info.device.fp_v1_0().bind_image_memory,
+            vkBindBufferMemory: create_info.device.commands().bind_buffer_memory,
+            vkBindImageMemory: create_info.device.commands().bind_image_memory,
             vkGetBufferMemoryRequirements: create_info
                 .device
-                .fp_v1_0()
+                .commands()
                 .get_buffer_memory_requirements,
             vkGetImageMemoryRequirements: create_info
                 .device
-                .fp_v1_0()
+                .commands()
                 .get_image_memory_requirements,
-            vkCreateBuffer: create_info.device.fp_v1_0().create_buffer,
-            vkDestroyBuffer: create_info.device.fp_v1_0().destroy_buffer,
-            vkCreateImage: create_info.device.fp_v1_0().create_image,
-            vkDestroyImage: create_info.device.fp_v1_0().destroy_image,
-            vkCmdCopyBuffer: create_info.device.fp_v1_0().cmd_copy_buffer,
+            vkCreateBuffer: create_info.device.commands().create_buffer,
+            vkDestroyBuffer: create_info.device.commands().destroy_buffer,
+            vkCreateImage: create_info.device.commands().create_image,
+            vkDestroyImage: create_info.device.commands().destroy_image,
+            vkCmdCopyBuffer: create_info.device.commands().cmd_copy_buffer,
             vkGetBufferMemoryRequirements2KHR: create_info
                 .device
-                .fp_v1_1()
-                .get_buffer_memory_requirements2,
+                .commands()
+                .get_buffer_memory_requirements2_khr,
             vkGetImageMemoryRequirements2KHR: create_info
                 .device
-                .fp_v1_1()
-                .get_image_memory_requirements2,
-            vkBindBufferMemory2KHR: create_info.device.fp_v1_1().bind_buffer_memory2,
-            vkBindImageMemory2KHR: create_info.device.fp_v1_1().bind_image_memory2,
+                .commands()
+                .get_image_memory_requirements2_khr,
+            vkBindBufferMemory2KHR: create_info.device.commands().bind_buffer_memory2_khr,
+            vkBindImageMemory2KHR: create_info.device.commands().bind_image_memory2_khr,
             vkGetPhysicalDeviceMemoryProperties2KHR: create_info
                 .instance
-                .fp_v1_1()
-                .get_physical_device_memory_properties2,
-            vkGetDeviceBufferMemoryRequirements: create_info
-                .device
-                .fp_v1_3()
-                .get_device_buffer_memory_requirements,
-            vkGetDeviceImageMemoryRequirements: create_info
-                .device
-                .fp_v1_3()
-                .get_device_image_memory_requirements,
+                .commands()
+                .get_physical_device_memory_properties2_khr,
+            vkGetDeviceBufferMemoryRequirements: pick_get_device_buffer_memory_requirements_fn(
+                &create_info),
+            vkGetDeviceImageMemoryRequirements: pick_get_device_image_memory_requirements_fn(&create_info),
         };
-        #[cfg(feature = "loaded")]
+        #[cfg(feature = "libloading")]
         {
             raw_create_info.pVulkanFunctions = &routed_functions;
         }
         unsafe {
             let mut internal: ffi::VmaAllocator = mem::zeroed();
-            ffi::vmaCreateAllocator(&raw_create_info, &mut internal).result()?;
+            ffi::vmaCreateAllocator(&raw_create_info, &mut internal);
 
             Ok(Allocator { internal })
         }
@@ -323,7 +342,7 @@ impl Allocator {
     /// `AllocationCreateFlags::CAN_BECOME_LOST` flag. Such allocations cannot be mapped.
     pub unsafe fn map_memory(&self, allocation: &mut Allocation) -> VkResult<*mut u8> {
         let mut mapped_data: *mut ::std::os::raw::c_void = ::std::ptr::null_mut();
-        ffi::vmaMapMemory(self.internal, allocation.0, &mut mapped_data).result()?;
+        ffi::vmaMapMemory(self.internal, allocation.0, &mut mapped_data);
 
         Ok(mapped_data as *mut u8)
     }
@@ -348,7 +367,7 @@ impl Allocator {
         offset: vk::DeviceSize,
         size: vk::DeviceSize,
     ) -> VkResult<()> {
-        unsafe { ffi::vmaFlushAllocation(self.internal, allocation.0, offset, size).result() }
+        to_vk_result(unsafe { ffi::vmaFlushAllocation(self.internal, allocation.0, offset, size) })
     }
 
     /// Invalidates memory of given allocation.
@@ -366,7 +385,7 @@ impl Allocator {
         offset: vk::DeviceSize,
         size: vk::DeviceSize,
     ) -> VkResult<()> {
-        unsafe { ffi::vmaInvalidateAllocation(self.internal, allocation.0, offset, size).result() }
+        to_vk_result(unsafe { ffi::vmaInvalidateAllocation(self.internal, allocation.0, offset, size) })
     }
 
     /// Checks magic number in margins around all allocations in given memory types (in both default and custom pools) in search for corruptions.
@@ -383,7 +402,7 @@ impl Allocator {
     ///   `VMA_ASSERT` is also fired in that case.
     /// - Other value: Error returned by Vulkan, e.g. memory mapping failure.
     pub unsafe fn check_corruption(&self, memory_types: vk::MemoryPropertyFlags) -> VkResult<()> {
-        ffi::vmaCheckCorruption(self.internal, memory_types.as_raw()).result()
+        to_vk_result(ffi::vmaCheckCorruption(self.internal, memory_types.bits()))
     }
 
     /// Binds buffer to allocation.
@@ -404,7 +423,7 @@ impl Allocator {
         allocation: &Allocation,
         buffer: vk::Buffer,
     ) -> VkResult<()> {
-        ffi::vmaBindBufferMemory(self.internal, allocation.0, buffer).result()
+        to_vk_result(ffi::vmaBindBufferMemory(self.internal, allocation.0, buffer))
     }
 
     /// Binds buffer to allocation with additional parameters.
@@ -425,14 +444,13 @@ impl Allocator {
         buffer: vk::Buffer,
         next: *const ::std::os::raw::c_void,
     ) -> VkResult<()> {
-        ffi::vmaBindBufferMemory2(
+        to_vk_result(ffi::vmaBindBufferMemory2(
             self.internal,
             allocation.0,
             allocation_local_offset,
             buffer,
             next,
-        )
-        .result()
+        ))
     }
 
     /// Binds image to allocation.
@@ -453,7 +471,7 @@ impl Allocator {
         allocation: &Allocation,
         image: vk::Image,
     ) -> VkResult<()> {
-        ffi::vmaBindImageMemory(self.internal, allocation.0, image).result()
+        to_vk_result(ffi::vmaBindImageMemory(self.internal, allocation.0, image))
     }
 
     /// Binds image to allocation with additional parameters.
@@ -474,14 +492,13 @@ impl Allocator {
         image: vk::Image,
         next: *const ::std::os::raw::c_void,
     ) -> VkResult<()> {
-        ffi::vmaBindImageMemory2(
+        to_vk_result(ffi::vmaBindImageMemory2(
             self.internal,
             allocation.0,
             allocation_local_offset,
             image,
             next,
-        )
-        .result()
+        ))
     }
 
     /// Destroys Vulkan buffer and frees allocated memory.
@@ -526,14 +543,13 @@ impl Allocator {
         sizes: Option<&[vk::DeviceSize]>,
     ) -> VkResult<()> {
         let allocations: Vec<ffi::VmaAllocation> = allocations.into_iter().map(|a| a.0).collect();
-        ffi::vmaFlushAllocations(
+        to_vk_result(ffi::vmaFlushAllocations(
             self.internal,
             allocations.len() as u32,
             allocations.as_ptr() as *mut _,
             offsets.map_or(std::ptr::null(), |offsets| offsets.as_ptr()),
             sizes.map_or(std::ptr::null(), |sizes| sizes.as_ptr()),
-        )
-        .result()
+        ))
     }
 
     /// Invalidates memory of given set of allocations."]
@@ -551,14 +567,13 @@ impl Allocator {
         sizes: Option<&[vk::DeviceSize]>,
     ) -> VkResult<()> {
         let allocations: Vec<ffi::VmaAllocation> = allocations.into_iter().map(|a| a.0).collect();
-        ffi::vmaInvalidateAllocations(
+        to_vk_result(ffi::vmaInvalidateAllocations(
             self.internal,
             allocations.len() as u32,
             allocations.as_ptr() as *mut _,
             offsets.map_or(std::ptr::null(), |offsets| offsets.as_ptr()),
             sizes.map_or(std::ptr::null(), |sizes| sizes.as_ptr()),
-        )
-        .result()
+        ))
     }
 }
 
@@ -570,4 +585,84 @@ impl Drop for Allocator {
             self.internal = std::ptr::null_mut();
         }
     }
+}
+
+unsafe fn pick_get_device_buffer_memory_requirements_fn(
+    create_info: &AllocatorCreateInfo,
+) -> Option<
+    unsafe extern "system" fn(
+        vulkanalia_sys::Device,
+        *const DeviceBufferMemoryRequirements,
+        *mut MemoryRequirements2,
+    )
+> {
+    let version = create_info
+        .instance
+        .get_physical_device_properties(create_info.physical_device)
+        .api_version;
+
+    let major = vk::version_major(version);
+    let minor = vk::version_minor(version);
+
+    if major != 1 {
+        return None;
+    }
+
+    let commands = create_info.device.commands();
+
+    if minor == 3 {
+        return Some(commands.get_device_buffer_memory_requirements);
+    } else if minor >= 1 {
+        if create_info
+            .device
+            .extensions()
+            .contains(&vk::KHR_MAINTENANCE4_EXTENSION.name)
+        {
+            return Some(commands.get_device_buffer_memory_requirements_khr);
+        } else {
+            return None;
+        }
+    }
+
+    return None;
+}
+
+unsafe fn pick_get_device_image_memory_requirements_fn(
+    create_info: &AllocatorCreateInfo,
+) -> Option<
+    unsafe extern "system" fn(
+        vulkanalia_sys::Device,
+        *const DeviceImageMemoryRequirements,
+        *mut MemoryRequirements2,
+    )
+> {
+    let version = create_info
+        .instance
+        .get_physical_device_properties(create_info.physical_device)
+        .api_version;
+
+    let major = vk::version_major(version);
+    let minor = vk::version_minor(version);
+
+    if major != 1 {
+        return None;
+    }
+
+    let commands = create_info.device.commands();
+
+    if minor == 3 {
+        return Some(commands.get_device_image_memory_requirements);
+    } else if minor >= 1 {
+        if create_info
+            .device
+            .extensions()
+            .contains(&vk::KHR_MAINTENANCE4_EXTENSION.name)
+        {
+            return Some(commands.get_device_image_memory_requirements_khr);
+        } else {
+            return None;
+        }
+    }
+
+    return None;
 }

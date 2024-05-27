@@ -1,5 +1,5 @@
-use crate::ffi;
-use ash::prelude::VkResult;
+use crate::{ffi, to_vk_result};
+use vulkanalia::VkResult;
 use std::mem;
 
 use crate::definitions::*;
@@ -30,7 +30,7 @@ impl VirtualBlock {
                     .map(|a| std::mem::transmute(a))
                     .unwrap_or(std::ptr::null()),
             };
-            ffi::vmaCreateVirtualBlock(&raw_info, &mut internal).result()?;
+            to_vk_result(ffi::vmaCreateVirtualBlock(&raw_info, &mut internal))?;
 
             Ok(VirtualBlock { internal })
         }
@@ -40,7 +40,7 @@ impl VirtualBlock {
     ///
     /// Possible error values:
     ///
-    /// - `ash::vk::Result::ERROR_OUT_OF_DEVICE_MEMORY` - Allocation failed due to not enough free space in the virtual block.
+    /// - `vulkanalia::vk::Result::ERROR_OUT_OF_DEVICE_MEMORY` - Allocation failed due to not enough free space in the virtual block.
     ///     (despite the function doesn't ever allocate actual GPU memory)
     pub unsafe fn allocate(
         &mut self,
@@ -49,8 +49,9 @@ impl VirtualBlock {
         let create_info: ffi::VmaVirtualAllocationCreateInfo = allocation_info.into();
         let mut allocation: ffi::VmaVirtualAllocation = std::mem::zeroed();
         let mut offset = 0;
-        ffi::vmaVirtualAllocate(self.internal, &create_info, &mut allocation, &mut offset)
-            .result()?;
+        to_vk_result(
+            ffi::vmaVirtualAllocate(self.internal, &create_info, &mut allocation, &mut offset)
+        )?;
         Ok((VirtualAllocation(allocation), offset))
     }
 

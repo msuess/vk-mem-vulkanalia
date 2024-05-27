@@ -1,17 +1,15 @@
-vk-mem
-========
+# vk-mem-vulkanalia
 
-[![vk-mem on travis-ci.com](https://travis-ci.com/gwihlidal/vk-mem-rs.svg?branch=master)](https://travis-ci.com/gwihlidal/vk-mem-rs)
-[![Latest version](https://img.shields.io/crates/v/vk-mem.svg)](https://crates.io/crates/vk-mem)
-[![Documentation](https://docs.rs/vk-mem/badge.svg)](https://docs.rs/vk-mem)
-[![Lines of Code](https://tokei.rs/b1/github/gwihlidal/vk-mem-rs)](https://github.com/gwihlidal/vk-mem-rs)
+[![Latest version](https://img.shields.io/crates/v/vk-mem-vulkanalia.svg)](https://crates.io/crates/vk-mem-vulkanalia)
+[![Documentation](https://docs.rs/vk-mem/badge.svg)](https://docs.rs/vk-mem-vulkanalia)
 ![MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 ![APACHE2](https://img.shields.io/badge/license-APACHE2-blue.svg)
 
-This crate provides an FFI layer and idiomatic rust wrappers for the excellent AMD Vulkan Memory Allocator (VMA) C/C++ library.
+This crate is a fork of [vk-mem](https://crates.io/vk-mem) using [vulkanalia](https://crates.io/vulkanalia) instead of [ash](https://crates.io/ash). It provides an FFI layer and idiomatic rust wrappers for the excellent AMD Vulkan Memory Allocator (VMA) C/C++ library.
 
-- [Documentation](https://docs.rs/vk-mem)
-- [Release Notes](https://github.com/gwihlidal/vk-mem-rs/releases)
+- [Documentation](https://docs.rs/vk-mem-vulkanalia)
+- [Release Notes](https://github.com/msuess/vk-mem-vulkanalia/releases)
+- [vk-mem GitHub](https://github.com/gwihlidal/vk-mem-rs)
 - [VMA GitHub](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator)
 - [VMA Documentation](https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/)
 - [GPU Open Announce](https://gpuopen.com/gaming-product/vulkan-memory-allocator/)
@@ -79,7 +77,7 @@ Additional features:
 
 - Extensive unit tests and examples.
   - Some unit tests already, but not full coverage
-  - Example isn't written - likely will port the VMA sample to `ash` and `vk_mem`
+  - Example isn't written - likely will port the VMA sample to `vulkanalia` and `vk_mem_vulkanalia`
 - Record and replay allocations, for in-depth analysis of memory usage, resource transitions, etc
   - Check for correctness, measure performance, and gather statistics.
 
@@ -87,26 +85,25 @@ Additional features:
 
 Basic usage of this crate is very simple; advanced features are optional.
 
-After you create a `vk_mem::Allocator` instance, very little code is needed to create a buffer:
+After you create a `vk_mem_vulkanalia::Allocator` instance, very little code is needed to create a buffer:
 
 ```rust
 // Create the buffer (GPU only, 16KiB in this example)
-let create_info = vk_mem::AllocationCreateInfo {
-    usage: vk_mem::MemoryUsage::GpuOnly,
+let create_info = vk_mem_vulkanalia::AllocationCreateInfo {
+    usage: vk_mem_vulkanalia::MemoryUsage::GpuOnly,
     ..Default::default()
 };
 
 let (buffer, allocation, allocation_info) = allocator
     .create_buffer(
-        &ash::vk::BufferCreateInfo::builder()
+        &vulkanalia::vk::BufferCreateInfo::builder()
             .size(16 * 1024)
-            .usage(ash::vk::BufferUsageFlags::VERTEX_BUFFER | ash::vk::BufferUsageFlags::TRANSFER_DST)
-            .build(),
+            .usage(vulkanalia::vk::BufferUsageFlags::VERTEX_BUFFER | vulkanalia::vk::BufferUsageFlags::TRANSFER_DST),
         &create_info,
     )
     .unwrap();
 
-// Do stuff with buffer! (type is ash::vk::Buffer)
+// Do stuff with buffer! (type is vulkanalia::vk::Buffer)
 
 // Destroy the buffer
 allocator.destroy_buffer(buffer, &allocation).unwrap();
@@ -114,10 +111,10 @@ allocator.destroy_buffer(buffer, &allocation).unwrap();
 
 With this one function call (`vk_mem::Allocator::create_buffer`):
 
-- `ash::vk::Buffer` (`VkBuffer`) is created.
-- `ash::vk::DeviceMemory` (`VkDeviceMemory`) block is allocated if needed.
+- `vulkanalia::vk::Buffer` (`VkBuffer`) is created.
+- `vulkanalia::vk::DeviceMemory` (`VkDeviceMemory`) block is allocated if needed.
 - An unused region of the memory block is bound to this buffer.
-- `vk_mem::Allocation` is created that represents memory assigned to this buffer. It can be queried for parameters like Vulkan memory handle and offset.
+- `vk_mem_vulkanalia::Allocation` is created that represents memory assigned to this buffer. It can be queried for parameters like Vulkan memory handle and offset.
 
 ## MoltenVK
 
@@ -137,13 +134,13 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-vk-mem = "0.3.0"
+vk-mem-vulkanalia = "0.1.0+vk-mem-0.4.0"
 ```
 
 and add this to your crate root:
 
 ```rust
-extern crate vk_mem;
+extern crate vk_mem_vulkanalia;
 ```
 
 ## Compiling using MinGW W64
@@ -171,15 +168,8 @@ at your option.
 ## Credits and Special Thanks
 
 - [Adam Sawicki - AMD](https://github.com/adam-sawicki-amd) (Author of C/C++ library)
-- [Maik Klein](https://github.com/MaikKlein) (Author of ash - Vulkan rust bindings)
-- [Johan Andersson](https://github.com/repi) (Contributions)
-- [Patrick Minogue](https://github.com/afpatmin) (Contributions)
-- [Layl Conway](https://github.com/LaylConway) (Contributions)
-- [aloucks](https://github.com/aloucks) (Contributions)
-- [Henrik Rydgård](https://github.com/hrydgard) (Contributions)
-- [msiglreith](https://github.com/msiglreith) (Contributions)
-- [Maksym Pavlenko](https://github.com/mxpv) (Contributions)
-- [Brandon Pollack](https://github.com/brandonpollack23) (Contributions)
+- [Kyle Mayes](https://github.com/KyleMayes) (Author of vulkanalia - Vulkan rust bindings)
+- [Graham Wihlidal](https://github.com/gwihlidal) (Author of vk-mem)
 
 ## Contribution
 
@@ -187,10 +177,10 @@ Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in this crate by you, as defined in the Apache-2.0 license, shall
 be dual licensed as above, without any additional terms or conditions.
 
-Contributions are always welcome; please look at the [issue tracker](https://github.com/gwihlidal/vk-mem-rs/issues) to see what known improvements are documented.
+Contributions are always welcome; please look at the [issue tracker](https://github.com/msuess/vk-mem-vulkanalia/issues) to see what known improvements are documented.
 
 ## Code of Conduct
 
-Contribution to the vk-mem crate is organized under the terms of the
-Contributor Covenant, the maintainer of vk-mem, @Neo-Zhixing, promises to
+Contribution to the vk-mem-vulkanalia crate is organized under the terms of the
+Contributor Covenant, the maintainer of vk-mem-vulkanalia, @msuess, promises to
 intervene to uphold that code of conduct.

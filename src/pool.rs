@@ -6,8 +6,10 @@ use crate::Allocation;
 use crate::AllocationCreateInfo;
 use crate::Allocator;
 use crate::PoolCreateInfo;
-use ash::prelude::VkResult;
-use ash::vk;
+use crate::to_vk_result;
+use vulkanalia_sys::Handle;
+use vulkanalia::VkResult;
+use vulkanalia::vk;
 #[derive(Clone, Copy)]
 pub struct PoolHandle(ffi::VmaPool);
 
@@ -34,7 +36,7 @@ impl Allocator {
                 minAllocationAlignment: create_info.min_allocation_alignment,
                 pMemoryAllocateNext: create_info.memory_allocate_next as *mut std::ffi::c_void,
             };
-            ffi::vmaCreatePool(self.internal, &raw_info, &mut ffi_pool).result()?;
+            to_vk_result(ffi::vmaCreatePool(self.internal, &raw_info, &mut ffi_pool))?;
             Ok(AllocatorPool {
                 pool: PoolHandle(ffi_pool),
                 allocator: self.clone(),
@@ -106,16 +108,16 @@ impl AllocatorPool {
     ///
     /// Corruption detection is enabled only when `VMA_DEBUG_DETECT_CORRUPTION` macro is defined to nonzero,
     /// `VMA_DEBUG_MARGIN` is defined to nonzero and the pool is created in memory type that is
-    /// `ash::vk::MemoryPropertyFlags::HOST_VISIBLE` and `ash::vk::MemoryPropertyFlags::HOST_COHERENT`.
+    /// `vulkanalia::vk::MemoryPropertyFlags::HOST_VISIBLE` and `vulkanalia::vk::MemoryPropertyFlags::HOST_COHERENT`.
     ///
     /// Possible error values:
     ///
-    /// - `ash::vk::Result::ERROR_FEATURE_NOT_PRESENT` - corruption detection is not enabled for specified pool.
-    /// - `ash::vk::Result::ERROR_VALIDATION_FAILED_EXT` - corruption detection has been performed and found memory corruptions around one of the allocations.
+    /// - `vulkanalia::vk::Result::ERROR_FEATURE_NOT_PRESENT` - corruption detection is not enabled for specified pool.
+    /// - `vulkanalia::vk::Result::ERROR_VALIDATION_FAILED_EXT` - corruption detection has been performed and found memory corruptions around one of the allocations.
     ///   `VMA_ASSERT` is also fired in that case.
     /// - Other value: Error returned by Vulkan, e.g. memory mapping failure.
     pub fn check_corruption(&self) -> VkResult<()> {
-        unsafe { ffi::vmaCheckPoolCorruption(self.allocator.internal, self.pool.0).result() }
+        to_vk_result(unsafe { ffi::vmaCheckPoolCorruption(self.allocator.internal, self.pool.0) })
     }
 }
 
@@ -131,7 +133,7 @@ pub trait Alloc {
     /// - Matches intended usage.
     /// - Has as many flags from `allocation_info.preferred_flags` as possible.
     ///
-    /// Returns ash::vk::Result::ERROR_FEATURE_NOT_PRESENT if not found. Receiving such a result
+    /// Returns vulkanalia::vk::Result::ERROR_FEATURE_NOT_PRESENT if not found. Receiving such a result
     /// from this function or any other allocating function probably means that your
     /// device doesn't support any memory type with requested features for the specific
     /// type of resource you want to use it for. Please check parameters of your
@@ -144,13 +146,12 @@ pub trait Alloc {
         let mut memory_type_index: u32 = 0;
         let mut allocation_info: ffi::VmaAllocationCreateInfo = allocation_info.into();
         allocation_info.pool = self.pool().0;
-        ffi::vmaFindMemoryTypeIndex(
+        to_vk_result(ffi::vmaFindMemoryTypeIndex(
             self.allocator().internal,
             memory_type_bits,
             &allocation_info,
             &mut memory_type_index,
-        )
-        .result()?;
+        ))?;
 
         Ok(memory_type_index)
     }
@@ -161,25 +162,24 @@ pub trait Alloc {
     /// It internally creates a temporary, dummy buffer that never has memory bound.
     /// It is just a convenience function, equivalent to calling:
     ///
-    /// - `ash::vk::Device::create_buffer`
-    /// - `ash::vk::Device::get_buffer_memory_requirements`
+    /// - `vulkanalia::vk::Device::create_buffer`
+    /// - `vulkanalia::vk::Device::get_buffer_memory_requirements`
     /// - `Allocator::find_memory_type_index`
-    /// - `ash::vk::Device::destroy_buffer`
+    /// - `vulkanalia::vk::Device::destroy_buffer`
     unsafe fn find_memory_type_index_for_buffer_info(
         &self,
-        buffer_info: &ash::vk::BufferCreateInfo,
+        buffer_info: &vulkanalia::vk::BufferCreateInfo,
         allocation_info: &AllocationCreateInfo,
     ) -> VkResult<u32> {
         let mut allocation_info: ffi::VmaAllocationCreateInfo = allocation_info.into();
         allocation_info.pool = self.pool().0;
         let mut memory_type_index: u32 = 0;
-        ffi::vmaFindMemoryTypeIndexForBufferInfo(
+        to_vk_result(ffi::vmaFindMemoryTypeIndexForBufferInfo(
             self.allocator().internal,
             buffer_info,
             &allocation_info,
             &mut memory_type_index,
-        )
-        .result()?;
+        ))?;
 
         Ok(memory_type_index)
     }
@@ -190,25 +190,24 @@ pub trait Alloc {
     /// It internally creates a temporary, dummy image that never has memory bound.
     /// It is just a convenience function, equivalent to calling:
     ///
-    /// - `ash::vk::Device::create_image`
-    /// - `ash::vk::Device::get_image_memory_requirements`
+    /// - `vulkanalia::vk::Device::create_image`
+    /// - `vulkanalia::vk::Device::get_image_memory_requirements`
     /// - `Allocator::find_memory_type_index`
-    /// - `ash::vk::Device::destroy_image`
+    /// - `vulkanalia::vk::Device::destroy_image`
     unsafe fn find_memory_type_index_for_image_info(
         &self,
-        image_info: ash::vk::ImageCreateInfo,
+        image_info: vulkanalia::vk::ImageCreateInfo,
         allocation_info: &AllocationCreateInfo,
     ) -> VkResult<u32> {
         let mut allocation_info: ffi::VmaAllocationCreateInfo = allocation_info.into();
         allocation_info.pool = self.pool().0;
         let mut memory_type_index: u32 = 0;
-        ffi::vmaFindMemoryTypeIndexForImageInfo(
+        to_vk_result(ffi::vmaFindMemoryTypeIndexForImageInfo(
             self.allocator().internal,
             &image_info,
             &allocation_info,
             &mut memory_type_index,
-        )
-        .result()?;
+        ))?;
 
         Ok(memory_type_index)
     }
@@ -221,20 +220,20 @@ pub trait Alloc {
     /// `Allocator::create_buffer`, `Allocator::create_image` instead whenever possible.
     unsafe fn allocate_memory(
         &self,
-        memory_requirements: &ash::vk::MemoryRequirements,
+        memory_requirements: &vulkanalia::vk::MemoryRequirements,
         create_info: &AllocationCreateInfo,
     ) -> VkResult<Allocation> {
         let mut create_info: ffi::VmaAllocationCreateInfo = create_info.into();
         create_info.pool = self.pool().0;
         let mut allocation: ffi::VmaAllocation = std::mem::zeroed();
+        to_vk_result(
         ffi::vmaAllocateMemory(
             self.allocator().internal,
             memory_requirements,
             &create_info,
             &mut allocation,
             std::ptr::null_mut(),
-        )
-        .result()?;
+        ))?;
 
         Ok(Allocation(allocation))
     }
@@ -250,22 +249,21 @@ pub trait Alloc {
     /// All allocations are made using same parameters. All of them are created out of the same memory pool and type.
     unsafe fn allocate_memory_pages(
         &self,
-        memory_requirements: &ash::vk::MemoryRequirements,
+        memory_requirements: &vulkanalia::vk::MemoryRequirements,
         create_info: &AllocationCreateInfo,
         allocation_count: usize,
     ) -> VkResult<Vec<Allocation>> {
         let mut create_info: ffi::VmaAllocationCreateInfo = create_info.into();
         create_info.pool = self.pool().0;
         let mut allocations: Vec<ffi::VmaAllocation> = vec![std::mem::zeroed(); allocation_count];
-        ffi::vmaAllocateMemoryPages(
+        to_vk_result(ffi::vmaAllocateMemoryPages(
             self.allocator().internal,
             memory_requirements,
             &create_info,
             allocation_count,
             allocations.as_mut_ptr(),
             std::ptr::null_mut(),
-        )
-        .result()?;
+        ))?;
 
         let allocations: Vec<Allocation> = allocations
             .into_iter()
@@ -280,21 +278,20 @@ pub trait Alloc {
     /// You should free the memory using `Allocator::free_memory` or 'Allocator::free_memory_pages'.
     unsafe fn allocate_memory_for_buffer(
         &self,
-        buffer: ash::vk::Buffer,
+        buffer: vulkanalia::vk::Buffer,
         create_info: &AllocationCreateInfo,
     ) -> VkResult<Allocation> {
         let mut create_info: ffi::VmaAllocationCreateInfo = create_info.into();
         create_info.pool = self.pool().0;
         let mut allocation: ffi::VmaAllocation = std::mem::zeroed();
         let mut allocation_info: ffi::VmaAllocationInfo = std::mem::zeroed();
-        ffi::vmaAllocateMemoryForBuffer(
+        to_vk_result(ffi::vmaAllocateMemoryForBuffer(
             self.allocator().internal,
             buffer,
             &create_info,
             &mut allocation,
             &mut allocation_info,
-        )
-        .result()?;
+        ))?;
 
         Ok(Allocation(allocation))
     }
@@ -304,20 +301,19 @@ pub trait Alloc {
     /// You should free the memory using `Allocator::free_memory` or 'Allocator::free_memory_pages'.
     unsafe fn allocate_memory_for_image(
         &self,
-        image: ash::vk::Image,
+        image: vulkanalia::vk::Image,
         create_info: &AllocationCreateInfo,
     ) -> VkResult<Allocation> {
         let mut create_info: ffi::VmaAllocationCreateInfo = create_info.into();
         create_info.pool = self.pool().0;
         let mut allocation: ffi::VmaAllocation = std::mem::zeroed();
-        ffi::vmaAllocateMemoryForImage(
+        to_vk_result(ffi::vmaAllocateMemoryForImage(
             self.allocator().internal,
             image,
             &create_info,
             &mut allocation,
             std::ptr::null_mut(),
-        )
-        .result()?;
+        ))?;
 
         Ok(Allocation(allocation))
     }
@@ -327,7 +323,7 @@ pub trait Alloc {
     ///
     /// If the function succeeded, you must destroy both buffer and allocation when you
     /// no longer need them using either convenience function `Allocator::destroy_buffer` or
-    /// separately, using `ash::Device::destroy_buffer` and `Allocator::free_memory`.
+    /// separately, using `vulkanalia::Device::destroy_buffer` and `Allocator::free_memory`.
     ///
     /// If `AllocatorCreateFlags::KHR_DEDICATED_ALLOCATION` flag was used,
     /// VK_KHR_dedicated_allocation extension is used internally to query driver whether
@@ -337,22 +333,21 @@ pub trait Alloc {
     /// allocation for this buffer, just like when using `AllocationCreateFlags::DEDICATED_MEMORY`.
     unsafe fn create_buffer(
         &self,
-        buffer_info: &ash::vk::BufferCreateInfo,
+        buffer_info: &vulkanalia::vk::BufferCreateInfo,
         create_info: &AllocationCreateInfo,
-    ) -> VkResult<(ash::vk::Buffer, Allocation)> {
+    ) -> VkResult<(vulkanalia::vk::Buffer, Allocation)> {
         let mut create_info: ffi::VmaAllocationCreateInfo = create_info.into();
         create_info.pool = self.pool().0;
         let mut buffer = vk::Buffer::null();
         let mut allocation: ffi::VmaAllocation = std::mem::zeroed();
-        ffi::vmaCreateBuffer(
+        to_vk_result(ffi::vmaCreateBuffer(
             self.allocator().internal,
             &*buffer_info,
             &create_info,
             &mut buffer,
             &mut allocation,
             std::ptr::null_mut(),
-        )
-        .result()?;
+        ))?;
 
         Ok((buffer, Allocation(allocation)))
     }
@@ -363,15 +358,15 @@ pub trait Alloc {
     /// for interop with OpenGL.
     unsafe fn create_buffer_with_alignment(
         &self,
-        buffer_info: &ash::vk::BufferCreateInfo,
+        buffer_info: &vulkanalia::vk::BufferCreateInfo,
         create_info: &AllocationCreateInfo,
         min_alignment: vk::DeviceSize,
-    ) -> VkResult<(ash::vk::Buffer, Allocation)> {
+    ) -> VkResult<(vulkanalia::vk::Buffer, Allocation)> {
         let mut create_info: ffi::VmaAllocationCreateInfo = create_info.into();
         create_info.pool = self.pool().0;
         let mut buffer = vk::Buffer::null();
         let mut allocation: ffi::VmaAllocation = std::mem::zeroed();
-        ffi::vmaCreateBufferWithAlignment(
+        to_vk_result(ffi::vmaCreateBufferWithAlignment(
             self.allocator().internal,
             &*buffer_info,
             &create_info,
@@ -379,8 +374,7 @@ pub trait Alloc {
             &mut buffer,
             &mut allocation,
             std::ptr::null_mut(),
-        )
-        .result()?;
+        ))?;
 
         Ok((buffer, Allocation(allocation)))
     }
@@ -389,7 +383,7 @@ pub trait Alloc {
     ///
     /// If the function succeeded, you must destroy both image and allocation when you
     /// no longer need them using either convenience function `Allocator::destroy_image` or
-    /// separately, using `ash::Device::destroy_image` and `Allocator::free_memory`.
+    /// separately, using `vulkanalia::Device::destroy_image` and `Allocator::free_memory`.
     ///
     /// If `AllocatorCreateFlags::KHR_DEDICATED_ALLOCATION` flag was used,
     /// `VK_KHR_dedicated_allocation extension` is used internally to query driver whether
@@ -403,22 +397,21 @@ pub trait Alloc {
     /// image, a panic will occur and `VK_ERROR_VALIDAITON_FAILED_EXT` is thrown.
     unsafe fn create_image(
         &self,
-        image_info: &ash::vk::ImageCreateInfo,
+        image_info: &vulkanalia::vk::ImageCreateInfo,
         create_info: &AllocationCreateInfo,
-    ) -> VkResult<(ash::vk::Image, Allocation)> {
+    ) -> VkResult<(vulkanalia::vk::Image, Allocation)> {
         let mut create_info: ffi::VmaAllocationCreateInfo = create_info.into();
         create_info.pool = self.pool().0;
         let mut image = vk::Image::null();
         let mut allocation: ffi::VmaAllocation = std::mem::zeroed();
-        ffi::vmaCreateImage(
+        to_vk_result(ffi::vmaCreateImage(
             self.allocator().internal,
             &*image_info,
             &create_info,
             &mut image,
             &mut allocation,
             std::ptr::null_mut(),
-        )
-        .result()?;
+        ))?;
 
         Ok((image, Allocation(allocation)))
     }
