@@ -14,14 +14,14 @@ fn main() {
     #[cfg(not(debug_assertions))]
     build.define("NDEBUG", "");
 
-    // We want to use the loader in ash, instead of requiring us to link
-    // in vulkan.dll/.dylib in addition to ash. This is especially important
+    // We want to use the loader in vulkanalia, instead of requiring us to link
+    // in vulkan.dll/.dylib in addition to vulkanalia. This is especially important
     // for MoltenVK, where there is no default installation path, unlike
     // Linux (pkconfig) and Windows (VULKAN_SDK environment variable).
     build.define("VMA_STATIC_VULKAN_FUNCTIONS", "0");
 
     // This prevents VMA from trying to fetch any remaining pointers
-    // that are still null after using the loader in ash, which can
+    // that are still null after using the loader in vulkanalia, which can
     // cause linker errors.
     build.define("VMA_DYNAMIC_VULKAN_FUNCTIONS", "0");
 

@@ -40,7 +40,7 @@ impl VirtualBlock {
     ///
     /// Possible error values:
     ///
-    /// - `ash::vk::Result::ERROR_OUT_OF_DEVICE_MEMORY` - Allocation failed due to not enough free space in the virtual block.
+    /// - `vulkanalia::vk::Result::ERROR_OUT_OF_DEVICE_MEMORY` - Allocation failed due to not enough free space in the virtual block.
     ///     (despite the function doesn't ever allocate actual GPU memory)
     pub unsafe fn allocate(
         &mut self,
