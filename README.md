@@ -5,7 +5,7 @@
 ![MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 ![APACHE2](https://img.shields.io/badge/license-APACHE2-blue.svg)
 
-This crate is a fork of [vk-mem](https://crates.io/vk-mem) using [vulkanalia](https://crates.io/vulkanalia) instead of [ash](https://crates.io/ash). It provides an FFI layer and idiomatic rust wrappers for the excellent AMD Vulkan Memory Allocator (VMA) C/C++ library.
+This crate is a fork of [vk-mem](https://crates.io/crates/vk-mem) using [vulkanalia](https://crates.io/crates/vulkanalia) instead of [ash](https://crates.io/crates/ash). It provides an FFI layer and idiomatic rust wrappers for the excellent AMD Vulkan Memory Allocator (VMA) C/C++ library.
 
 - [Documentation](https://docs.rs/vk-mem-vulkanalia)
 - [Release Notes](https://github.com/msuess/vk-mem-vulkanalia/releases)
